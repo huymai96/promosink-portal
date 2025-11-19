@@ -81,19 +81,21 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 >
                   All Brands
                 </Link>
-                {brands.map((brand) => (
-                  <Link
-                    key={brand}
-                    href={`/products?brand=${encodeURIComponent(brand)}`}
-                    className={`block text-sm ${
-                      resolvedSearchParams.brand === brand
-                        ? "text-indigo-600 font-medium"
-                        : "text-gray-600 hover:text-gray-900"
-                    }`}
-                  >
-                    {brand}
-                  </Link>
-                ))}
+                {brands
+                  .filter((brand): brand is string => brand !== null && brand !== undefined)
+                  .map((brand) => (
+                    <Link
+                      key={brand}
+                      href={`/products?brand=${encodeURIComponent(brand)}`}
+                      className={`block text-sm ${
+                        resolvedSearchParams.brand === brand
+                          ? "text-indigo-600 font-medium"
+                          : "text-gray-600 hover:text-gray-900"
+                      }`}
+                    >
+                      {brand}
+                    </Link>
+                  ))}
               </div>
             </div>
           )}
