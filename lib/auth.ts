@@ -6,7 +6,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 // Helper function to get session in NextAuth v5 beta
-export async function getServerSession() {
+export async function getServerSession(_options?: any) {
   try {
     // Create a request-like object from headers
     const headersList = await import("next/headers").then(m => m.headers());
