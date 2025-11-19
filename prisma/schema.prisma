@@ -1,0 +1,360 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Multi-tenant
+model Tenant {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  name          String
+  logoUrl       String?
+  primaryColor  String   @default("#000000")
+  secondaryColor String  @default("#666666")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  customerAccounts CustomerAccount[]
+  users            User[]
+  products         Product[]
+  orders           Order[]
+}
+
+// Authentication & Authorization
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String // hashed
+  name      String?
+  role      UserRole @default(CUSTOMER_USER)
+  tenantId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerUser   CustomerUser?
+  sessions       Session[]
+  accounts       Account[]
+}
+
+enum UserRole {
+  ADMIN
+  CUSTOMER_USER
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+// Customer Accounts
+model CustomerAccount {
+  id        String   @id @default(cuid())
+  tenantId  String
+  name      String
+  accountNumber String @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tenant            Tenant              @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerUsers     CustomerUser[]
+  decorationPrices  DecorationPriceTable[]
+  orders            Order[]
+}
+
+model CustomerUser {
+  id                String   @id @default(cuid())
+  userId            String   @unique
+  customerAccountId String
+  createdAt         DateTime @default(now())
+
+  user            User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  customerAccount CustomerAccount @relation(fields: [customerAccountId], references: [id], onDelete: Cascade)
+}
+
+// Catalog
+model Supplier {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  code      String   @unique
+  createdAt DateTime @default(now())
+
+  products Product[]
+}
+
+model Product {
+  id          String   @id @default(cuid())
+  tenantId    String
+  supplierId  String?
+  styleCode   String
+  name        String
+  description String?  @db.Text
+  brand       String?
+  category    String
+  gender      String?
+  fabric      String?
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  tenant         Tenant          @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  supplier       Supplier?       @relation(fields: [supplierId], references: [id])
+  variants       ProductVariant[]
+  cartItems      CartItem[]
+  orderLines     OrderLine[]
+
+  @@unique([tenantId, styleCode])
+  @@index([tenantId, category])
+  @@index([styleCode])
+}
+
+model ProductVariant {
+  id          String   @id @default(cuid())
+  productId   String
+  color       String
+  size        String
+  supplierSku String
+  weight      Float    // in oz
+  imageUrl    String?
+  createdAt   DateTime @default(now())
+
+  product          Product           @relation(fields: [productId], references: [id], onDelete: Cascade)
+  inventorySnapshots InventorySnapshot[]
+  cartItems        CartItem[]
+  orderLines       OrderLine[]
+
+  @@unique([productId, color, size])
+  @@index([supplierSku])
+}
+
+model Warehouse {
+  id        String   @id @default(cuid())
+  code      String   @unique
+  name      String
+  address   String?
+  createdAt DateTime @default(now())
+
+  inventorySnapshots InventorySnapshot[]
+}
+
+model InventorySnapshot {
+  id            String     @id @default(cuid())
+  variantId     String
+  warehouseId   String
+  onHand        Int        @default(0)
+  onOrder       Int        @default(0)
+  backorderDate DateTime?
+  snapshotDate  DateTime   @default(now())
+
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+  warehouse Warehouse      @relation(fields: [warehouseId], references: [id])
+
+  @@unique([variantId, warehouseId, snapshotDate])
+  @@index([variantId])
+}
+
+// Decoration
+model DecorationMethod {
+  id        String   @id @default(cuid())
+  code      String   @unique // SCREEN, EMB, DTG, DTF
+  name      String
+  createdAt DateTime @default(now())
+
+  priceTables DecorationPriceTable[]
+  cartItems   CartItem[]
+  orderDecorations OrderDecoration[]
+}
+
+model DecorationPriceTable {
+  id                String   @id @default(cuid())
+  decorationMethodId String
+  customerAccountId String?  // null = global/default
+  minQty            Int
+  maxQty            Int?
+  maxColors         Int?
+  maxStitches       Int?
+  pricePerUnit      Float
+  setupCharge       Float?   @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  decorationMethod DecorationMethod @relation(fields: [decorationMethodId], references: [id])
+  customerAccount  CustomerAccount? @relation(fields: [customerAccountId], references: [id])
+
+  @@index([decorationMethodId, customerAccountId])
+  @@index([minQty, maxQty])
+}
+
+// Cart
+model Cart {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items CartItem[]
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  cartId    String
+  productId String
+  variantId String
+  quantity  Int
+  unitPrice Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  cart            Cart            @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product         Product         @relation(fields: [productId], references: [id])
+  variant         ProductVariant  @relation(fields: [variantId], references: [id])
+  decorationMethod DecorationMethod? @relation(fields: [decorationMethodId], references: [id])
+  decorationMethodId String?
+  decorationConfig Json? // stores decoration configuration
+  decorationPrice  Float? // calculated decoration price per unit
+  setupCharge      Float? // calculated setup charge
+
+  @@index([cartId])
+}
+
+// Orders
+model Order {
+  id              String      @id @default(cuid())
+  tenantId        String
+  customerAccountId String
+  externalId      String?     @unique // ID from Promos Ink API
+  orderNumber     String      @unique
+  status          OrderStatus @default(RECEIVED)
+  poNumber        String?
+  shipToName      String
+  shipToAddress1  String
+  shipToAddress2  String?
+  shipToCity      String
+  shipToState     String
+  shipToZip       String
+  shipToCountry   String      @default("US")
+  inHandsDate     DateTime?
+  referenceFields Json?       // additional reference fields
+  notes           String?     @db.Text
+  shippingMethod  String?
+  shippingCost    Float?
+  trackingNumber  String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  tenant         Tenant         @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  customerAccount CustomerAccount @relation(fields: [customerAccountId], references: [id])
+  lines          OrderLine[]
+  decorations    OrderDecoration[]
+
+  @@index([tenantId, customerAccountId])
+  @@index([orderNumber])
+  @@index([status])
+}
+
+enum OrderStatus {
+  RECEIVED
+  VALIDATED
+  IN_PRODUCTION
+  SHIPPED
+}
+
+model OrderLine {
+  id        String   @id @default(cuid())
+  orderId   String
+  productId String
+  variantId String
+  quantity  Int
+  unitPrice Float
+  createdAt DateTime @default(now())
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+  variant ProductVariant @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+}
+
+model OrderDecoration {
+  id                String   @id @default(cuid())
+  orderId           String
+  decorationMethodId String
+  location          String   // Left Chest, Full Front, etc.
+  config            Json     // method-specific configuration
+  quantity          Int
+  unitPrice         Float
+  setupCharge       Float?
+  createdAt         DateTime @default(now())
+
+  order            Order            @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  decorationMethod DecorationMethod @relation(fields: [decorationMethodId], references: [id])
+  artworkAssets    ArtworkAsset[]
+  proofs           Proof[]
+
+  @@index([orderId])
+}
+
+// Artwork & Proofs
+model ArtworkAsset {
+  id                String   @id @default(cuid())
+  orderDecorationId String
+  blobUrl           String
+  fileType          String
+  fileName          String
+  isProof           Boolean  @default(false)
+  version           Int      @default(1)
+  createdAt         DateTime @default(now())
+
+  orderDecoration OrderDecoration @relation(fields: [orderDecorationId], references: [id], onDelete: Cascade)
+
+  @@index([orderDecorationId])
+}
+
+model Proof {
+  id                String      @id @default(cuid())
+  orderDecorationId String
+  status            ProofStatus @default(PENDING_CUSTOMER)
+  customerComment   String?     @db.Text
+  internalComment   String?     @db.Text
+  createdAt         DateTime    @default(now())
+  updatedAt         DateTime    @updatedAt
+
+  orderDecoration OrderDecoration @relation(fields: [orderDecorationId], references: [id], onDelete: Cascade)
+
+  @@index([orderDecorationId, status])
+}
+
+enum ProofStatus {
+  PENDING_CUSTOMER
+  APPROVED
+  REJECTED
+}
