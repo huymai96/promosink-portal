@@ -3,9 +3,51 @@ import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { getToken } from "next-auth/jwt";
+import type { NextRequest } from "next/server";
 
-// Export getServerSession for use in other files
-export { getServerSession } from "next-auth/next";
+// Helper function to get session in NextAuth v5 beta
+export async function getServerSession(options?: NextAuthOptions) {
+  try {
+    // Create a request-like object from headers
+    const headersList = await import("next/headers").then(m => m.headers());
+    const cookieHeader = headersList.get("cookie") || "";
+    
+    const req = {
+      headers: {
+        get: (name: string) => {
+          if (name.toLowerCase() === "cookie") return cookieHeader;
+          return headersList.get(name);
+        },
+      },
+      url: "",
+    };
+    
+    const token = await getToken({ 
+      req: req as any,
+      secret: process.env.NEXTAUTH_SECRET 
+    });
+    
+    if (!token) return null;
+    
+    // Return session-like object
+    return {
+      user: {
+        id: token.id as string,
+        email: token.email as string,
+        name: token.name as string,
+        role: token.role as string,
+        tenantId: token.tenantId as string,
+        tenantSlug: token.tenantSlug as string,
+        customerAccountId: token.customerAccountId as string,
+      },
+      expires: token.exp ? new Date(token.exp * 1000).toISOString() : undefined,
+    };
+  } catch (error) {
+    console.error("getServerSession error:", error);
+    return null;
+  }
+}
 
 export const authOptions: NextAuthOptions = {
   adapter: PrismaAdapter(prisma) as any,

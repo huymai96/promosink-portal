@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "@/lib/auth";
 import { authOptions } from "@/lib/auth";
 
 export async function middleware(request: NextRequest) {

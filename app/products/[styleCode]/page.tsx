@@ -1,5 +1,5 @@
 import { getProductByStyleCode } from "@/lib/catalog";
-import { getServerSession } from "next-auth/next";
+import { getServerSession } from "@/lib/auth";
 import { authOptions } from "@/lib/auth";
 import { redirect } from "next/navigation";
 import Image from "next/image";
