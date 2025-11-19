@@ -6,7 +6,7 @@ import { put } from "@vercel/blob";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -15,6 +15,7 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const formData = await request.formData();
     const file = formData.get("file") as File;
     const isProof = formData.get("isProof") === "true";
@@ -47,7 +48,7 @@ export async function POST(
     }
 
     const decoration = await prisma.orderDecoration.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: true,
       },

@@ -5,7 +5,7 @@ import { prisma } from "@/lib/prisma";
 
 export async function POST(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const session = await getServerSession(authOptions);
@@ -14,10 +14,11 @@ export async function POST(
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    const { id } = await params;
     const { comment } = await request.json();
 
     const proof = await prisma.proof.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         orderDecoration: {
           include: {
@@ -43,7 +44,7 @@ export async function POST(
     }
 
     await prisma.proof.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: "APPROVED",
         customerComment: comment || null,
