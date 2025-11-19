@@ -15,11 +15,11 @@
   },
   "dependencies": {
     "@auth/prisma-adapter": "^2.6.1",
-    "@prisma/client": "^5.20.0",
+    "@easypost/api": "^8.3.0",
+    "@prisma/client": "^6.19.0",
     "@vercel/blob": "^0.25.0",
     "@vercel/postgres": "^0.9.0",
     "bcryptjs": "^2.4.3",
-    "@easypost/api": "^8.3.0",
     "next": "^15.0.0",
     "next-auth": "^5.0.0-beta.25",
     "react": "^18.2.0",
@@ -35,10 +35,9 @@
     "eslint": "^9.15.0",
     "eslint-config-next": "15.0.0",
     "postcss": "^8.4.47",
-    "prisma": "^5.20.0",
+    "prisma": "^6.19.0",
     "tailwindcss": "^3.4.13",
     "tsx": "^4.19.1",
     "typescript": "^5.6.3"
   }
 }
-
