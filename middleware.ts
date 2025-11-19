@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-import { getServerSession } from "@/lib/auth";
-import { authOptions } from "@/lib/auth";
+import { getToken } from "next-auth/jwt";
 
 export async function middleware(request: NextRequest) {
-  const session = await getServerSession(authOptions);
+  const token = await getToken({
+    req: request,
+    secret: process.env.NEXTAUTH_SECRET,
+  });
   
   // Protect routes that require authentication
   const pathname = request.nextUrl.pathname;
@@ -14,7 +16,7 @@ export async function middleware(request: NextRequest) {
      pathname.startsWith("/cart") || 
      pathname.startsWith("/checkout") ||
      pathname.startsWith("/app")) &&
-    !session
+    !token
   ) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
