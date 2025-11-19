@@ -8,7 +8,7 @@ import { AddToCartForm } from "@/components/AddToCartForm";
 export default async function ProductDetailPage({
   params,
 }: {
-  params: { styleCode: string };
+  params: Promise<{ styleCode: string }>;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -16,8 +16,9 @@ export default async function ProductDetailPage({
     redirect("/login");
   }
 
+  const { styleCode } = await params;
   const tenantId = session.user.tenantId as string;
-  const product = await getProductByStyleCode(tenantId, params.styleCode);
+  const product = await getProductByStyleCode(tenantId, styleCode);
 
   if (!product) {
     return (

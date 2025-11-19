@@ -8,7 +8,7 @@ import { ProofApproval } from "@/components/ProofApproval";
 export default async function OrderDetailPage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const session = await getServerSession(authOptions);
 
@@ -16,8 +16,9 @@ export default async function OrderDetailPage({
     redirect("/login");
   }
 
+  const { id } = await params;
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       lines: {
         include: {
