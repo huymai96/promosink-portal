@@ -1,4 +1,3 @@
-import { NextAuthOptions } from "next-auth";
 import CredentialsProvider from "next-auth/providers/credentials";
 import { PrismaAdapter } from "@auth/prisma-adapter";
 import { prisma } from "@/lib/prisma";
@@ -7,7 +6,7 @@ import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 // Helper function to get session in NextAuth v5 beta
-export async function getServerSession(options?: NextAuthOptions) {
+export async function getServerSession() {
   try {
     // Create a request-like object from headers
     const headersList = await import("next/headers").then(m => m.headers());
@@ -49,7 +48,7 @@ export async function getServerSession(options?: NextAuthOptions) {
   }
 }
 
-export const authOptions: NextAuthOptions = {
+export const authOptions = {
   adapter: PrismaAdapter(prisma) as any,
   providers: [
     CredentialsProvider({
