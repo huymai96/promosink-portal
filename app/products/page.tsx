@@ -6,11 +6,11 @@ import Link from "next/link";
 import Image from "next/image";
 
 interface ProductsPageProps {
-  searchParams: {
+  searchParams: Promise<{
     category?: string;
     brand?: string;
     search?: string;
-  };
+  }>;
 }
 
 export default async function ProductsPage({ searchParams }: ProductsPageProps) {
@@ -20,11 +20,12 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     redirect("/login");
   }
 
+  const resolvedSearchParams = await searchParams;
   const tenantId = session.user.tenantId as string;
   const { products, total } = await getProducts(tenantId, {
-    category: searchParams.category,
-    brand: searchParams.brand,
-    search: searchParams.search,
+    category: resolvedSearchParams.category,
+    brand: resolvedSearchParams.brand,
+    search: resolvedSearchParams.search,
   });
 
   const categories = await getCategories(tenantId);
@@ -43,7 +44,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
               <Link
                 href="/products"
                 className={`block text-sm ${
-                  !searchParams.category
+                  !resolvedSearchParams.category
                     ? "text-indigo-600 font-medium"
                     : "text-gray-600 hover:text-gray-900"
                 }`}
@@ -55,7 +56,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                   key={cat}
                   href={`/products?category=${encodeURIComponent(cat)}`}
                   className={`block text-sm ${
-                    searchParams.category === cat
+                    resolvedSearchParams.category === cat
                       ? "text-indigo-600 font-medium"
                       : "text-gray-600 hover:text-gray-900"
                   }`}
@@ -73,7 +74,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                 <Link
                   href="/products"
                   className={`block text-sm ${
-                    !searchParams.brand
+                    !resolvedSearchParams.brand
                       ? "text-indigo-600 font-medium"
                       : "text-gray-600 hover:text-gray-900"
                   }`}
@@ -85,7 +86,7 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
                     key={brand}
                     href={`/products?brand=${encodeURIComponent(brand)}`}
                     className={`block text-sm ${
-                      searchParams.brand === brand
+                      resolvedSearchParams.brand === brand
                         ? "text-indigo-600 font-medium"
                         : "text-gray-600 hover:text-gray-900"
                     }`}
