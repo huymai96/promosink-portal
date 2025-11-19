@@ -1,25 +1,27 @@
-import { withAuth } from "next-auth/middleware";
 import { NextResponse } from "next/server";
+import type { NextRequest } from "next/server";
+import { getServerSession } from "next-auth/next";
+import { authOptions } from "@/lib/auth";
 
-export default withAuth(
-  function middleware(req) {
-    // Add tenant resolution logic here if needed
-    return NextResponse.next();
-  },
-  {
-    callbacks: {
-      authorized: ({ token, req }) => {
-        // Protect /app routes
-        if (req.nextUrl.pathname.startsWith("/app")) {
-          return !!token;
-        }
-        return true;
-      },
-    },
+export async function middleware(request: NextRequest) {
+  const session = await getServerSession(authOptions);
+  
+  // Protect routes that require authentication
+  const pathname = request.nextUrl.pathname;
+  
+  if (
+    (pathname.startsWith("/orders") || 
+     pathname.startsWith("/cart") || 
+     pathname.startsWith("/checkout") ||
+     pathname.startsWith("/app")) &&
+    !session
+  ) {
+    return NextResponse.redirect(new URL("/login", request.url));
   }
-);
+  
+  return NextResponse.next();
+}
 
 export const config = {
   matcher: ["/app/:path*", "/orders/:path*", "/cart", "/checkout"],
 };
-
